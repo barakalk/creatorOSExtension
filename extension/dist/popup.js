@@ -48,6 +48,7 @@ class PopupController {
     this.elements = this.getElements();
     this.setupEventListeners();
     this.initialize();
+    this.refreshSavedList();
   }
   getElements() {
     const get = (id) => document.getElementById(id);
@@ -61,21 +62,15 @@ class PopupController {
     };
   }
   setupEventListeners() {
-    this.elements.captureToggle.addEventListener("change", () => {
-      this.handleToggleChange();
-    });
-    this.elements.captureNowButton.addEventListener("click", () => {
-      this.handleCaptureNow();
-    });
+    this.elements.captureToggle.addEventListener("change", () => this.handleToggleChange());
+    this.elements.captureNowButton.addEventListener("click", () => this.handleCaptureNow());
+    document.getElementById("refresh-list").addEventListener("click", () => this.refreshSavedList());
   }
   async initialize() {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const currentTab = tabs[0];
-      if (!currentTab || !currentTab.url) {
-        this.showError("No active tab found");
-        return;
-      }
+      if (!currentTab || !currentTab.url) return;
       this.currentTabId = currentTab.id;
       const url = new URL(currentTab.url);
       this.currentHostname = url.hostname;
@@ -83,20 +78,53 @@ class PopupController {
       await this.updateToggleState();
     } catch (error) {
       logger.error("Failed to initialize popup:", error);
-      this.showError("Failed to initialize popup");
+    }
+  }
+  async refreshSavedList() {
+    try {
+      const res = await sendMessage({ type: "LIST_CAPTURES" });
+      const list = (res == null ? void 0 : res.items) ?? [];
+      const container = document.getElementById("captures");
+      container.innerHTML = "";
+      list.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "item";
+        const left = document.createElement("div");
+        left.innerHTML = `<div>${item.title || item.url}</div><div class="muted">${new Date(item.timestamp).toLocaleString()} · ${(item.sizeBytes / 1024).toFixed(1)} KB</div>`;
+        const right = document.createElement("div");
+        const openBtn = document.createElement("button");
+        openBtn.className = "button button-link";
+        openBtn.textContent = "Open";
+        openBtn.onclick = async () => {
+          const r = await sendMessage({ type: "GET_CAPTURE_HTML", id: item.id });
+          if ((r == null ? void 0 : r.ok) && r.html) {
+            const blob = new Blob([r.html], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            chrome.tabs.create({ url });
+          }
+        };
+        const delBtn = document.createElement("button");
+        delBtn.className = "button button-link";
+        delBtn.textContent = "Delete";
+        delBtn.onclick = async () => {
+          await sendMessage({ type: "DELETE_CAPTURE", id: item.id });
+          this.refreshSavedList();
+        };
+        right.append(openBtn, delBtn);
+        row.append(left, right);
+        container.appendChild(row);
+      });
+    } catch (e) {
+      logger.error("Failed to list captures", e);
     }
   }
   async updateToggleState() {
     try {
-      const response = await sendMessage({
-        type: "GET_TOGGLE",
-        hostname: this.currentHostname
-      });
+      const response = await sendMessage({ type: "GET_TOGGLE", hostname: this.currentHostname });
       const enabled = (response == null ? void 0 : response.enabled) ?? true;
       this.elements.captureToggle.checked = enabled;
       this.elements.toggleStatus.textContent = enabled ? "On" : "Off";
-    } catch (error) {
-      logger.error("Failed to get toggle state:", error);
+    } catch {
       this.elements.captureToggle.checked = true;
       this.elements.toggleStatus.textContent = "On";
     }
@@ -104,93 +132,43 @@ class PopupController {
   async handleToggleChange() {
     const enabled = this.elements.captureToggle.checked;
     try {
-      await sendMessage({
-        type: "TOGGLE_CAPTURE",
-        hostname: this.currentHostname,
-        enabled
-      });
+      await sendMessage({ type: "TOGGLE_CAPTURE", hostname: this.currentHostname, enabled });
       this.elements.toggleStatus.textContent = enabled ? "On" : "Off";
-      this.showSuccess(
-        `Capture ${enabled ? "enabled" : "disabled"} for ${this.currentHostname}`
-      );
-    } catch (error) {
-      logger.error("Failed to toggle capture:", error);
+    } catch {
       this.elements.captureToggle.checked = !enabled;
       this.elements.toggleStatus.textContent = !enabled ? "On" : "Off";
-      this.showError("Failed to update capture setting");
     }
   }
   async handleCaptureNow() {
-    if (!this.currentTabId) {
-      this.showError("No active tab");
-      return;
-    }
+    if (!this.currentTabId) return;
     try {
       this.setCapturing(true);
       let response;
       try {
-        response = await sendMessageToTab(this.currentTabId, {
-          type: "CAPTURE_REQUEST",
-          url: ""
-          // Content script will use current URL
-        });
+        response = await sendMessageToTab(this.currentTabId, { type: "CAPTURE_REQUEST", url: "" });
       } catch (err) {
         const msg = String((err == null ? void 0 : err.message) || "");
         if (msg.includes("Receiving end does not exist") || msg.includes("Could not establish connection")) {
-          await chrome.scripting.executeScript({
-            target: { tabId: this.currentTabId },
-            func: (url) => {
-              return import(url);
-            },
-            args: [chrome.runtime.getURL("content.js")],
-            world: "ISOLATED"
-          });
-          response = await sendMessageToTab(this.currentTabId, {
-            type: "CAPTURE_REQUEST",
-            url: ""
-          });
-        } else {
-          throw err;
-        }
+          await chrome.scripting.executeScript({ target: { tabId: this.currentTabId }, files: ["content.js"] });
+          response = await sendMessageToTab(this.currentTabId, { type: "CAPTURE_REQUEST", url: "" });
+        } else throw err;
       }
-      if (response == null ? void 0 : response.success) {
-        this.showSuccess("Capture initiated successfully");
-      } else {
-        this.showError((response == null ? void 0 : response.error) || "Capture failed");
-      }
+      if (response == null ? void 0 : response.success) this.showStatus("Capture initiated successfully");
+      else this.showStatus((response == null ? void 0 : response.error) || "Capture failed");
     } catch (error) {
       logger.error("Manual capture failed:", error);
-      this.showError("Failed to initiate capture");
+      this.showStatus("Failed to initiate capture");
     } finally {
       this.setCapturing(false);
+      this.refreshSavedList();
     }
   }
   setCapturing(capturing) {
     this.elements.captureNowButton.disabled = capturing;
-    if (capturing) {
-      this.elements.captureNowText.textContent = "Capturing";
-      this.elements.captureNowText.classList.add("loading-dots");
-      this.showStatus("Capturing page content...", "loading");
-    } else {
-      this.elements.captureNowText.textContent = "Capture Now";
-      this.elements.captureNowText.classList.remove("loading-dots");
-    }
+    this.elements.captureNowText.textContent = capturing ? "Capturing" : "Capture Now";
   }
-  showStatus(message, type) {
-    this.elements.status.className = `status status-${type}`;
+  showStatus(message) {
     this.elements.status.textContent = message;
-    this.elements.status.classList.remove("hidden");
-    if (type !== "loading") {
-      setTimeout(() => {
-        this.elements.status.classList.add("hidden");
-      }, 3e3);
-    }
-  }
-  showSuccess(message) {
-    this.showStatus(message, "success");
-  }
-  showError(message) {
-    this.showStatus(message, "error");
   }
 }
 if (document.readyState === "loading") {

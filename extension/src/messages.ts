@@ -6,7 +6,10 @@ export type Msg =
   | { type: 'CAPTURE_RESULT'; ok: boolean; captureId?: string; error?: string }
   | { type: 'TOGGLE_CAPTURE'; hostname: string; enabled: boolean }
   | { type: 'GET_TOGGLE'; hostname: string }
-  | { type: 'GET_TOGGLE_RESPONSE'; hostname: string; enabled: boolean };
+  | { type: 'GET_TOGGLE_RESPONSE'; hostname: string; enabled: boolean }
+  | { type: 'LIST_CAPTURES' }
+  | { type: 'GET_CAPTURE_HTML'; id: string }
+  | { type: 'DELETE_CAPTURE'; id: string };
 
 // Helper functions for message handling
 export function sendMessage<T extends Msg>(message: T): Promise<any> {

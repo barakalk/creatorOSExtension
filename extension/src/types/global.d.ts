@@ -36,6 +36,16 @@ export interface WhitelistCache {
   timestamp: number;
 }
 
+export interface StoredCaptureMeta {
+  id: string;
+  url: string;
+  timestamp: number;
+  sizeBytes: number;
+  title?: string;
+}
+
+export type StorageListItem = StoredCaptureMeta;
+
 // Chrome extension specific types
 declare global {
   interface Window {
