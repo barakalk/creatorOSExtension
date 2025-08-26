@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator OS Capture</title>
+  <style>
+    body {
+      width: 320px;
+      min-height: 200px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      background-color: #f8f9fa;
+    }
+    
+    .header {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      color: #1f2937;
+    }
+    
+    .hostname {
+      font-size: 12px;
+      color: #6b7280;
+      word-break: break-all;
+    }
+    
+    .toggle-section {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+    
+    .toggle-input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    .toggle-input:checked + .toggle-slider {
+      background-color: #3b82f6;
+    }
+    
+    .toggle-input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    
+    .actions {
+      margin-bottom: 16px;
+    }
+    
+    .button {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .button-primary {
+      background-color: #3b82f6;
+      color: white;
+    }
+    
+    .button-primary:hover {
+      background-color: #2563eb;
+    }
+    
+    .button-primary:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .status-success {
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    
+    .status-error {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    
+    .status-loading {
+      background-color: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .loading-dots::after {
+      content: '...';
+      animation: loading 1.5s infinite;
+    }
+    
+    @keyframes loading {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">Creator OS Capture</h1>
+    <div class="hostname" id="hostname">Loading...</div>
+  </div>
+  
+  <div class="toggle-section">
+    <div class="toggle-label">
+      <span>Capture: <strong id="toggle-status">On</strong></span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="capture-toggle" class="toggle-input" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button id="capture-now" class="button button-primary">
+      <span id="capture-now-text">Capture Now</span>
+    </button>
+  </div>
+  
+  <div id="status" class="status hidden"></div>
+
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>

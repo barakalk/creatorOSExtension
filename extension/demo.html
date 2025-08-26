@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator OS Capture Demo Page</title>
+  <script>
+    console.log('This script should be removed by sanitization');
+    function dangerousFunction() {
+      alert('This should not execute in captured DOM');
+    }
+  </script>
+  <style>
+    .demo-style {
+      color: red;
+      background: yellow;
+    }
+    /* This style should be removed by sanitization */
+  </style>
+</head>
+<body>
+  <h1>Creator OS Capture Demo Page</h1>
+  
+  <p>This is a test page for demonstrating the Creator OS Capture extension.</p>
+  
+  <div class="content-section">
+    <h2>Test Content</h2>
+    <p>This content should be captured and sent to the backend.</p>
+    
+    <button onclick="dangerousFunction()" onmouseover="console.log('hover')">
+      Dangerous Button (events should be stripped)
+    </button>
+  </div>
+  
+  <form class="test-form">
+    <h3>Form Data (should be cleared)</h3>
+    
+    <label for="username">Username:</label>
+    <input type="text" id="username" value="secret-username">
+    
+    <label for="password">Password:</label>
+    <input type="password" id="password" value="secret-password">
+    
+    <label for="comments">Comments:</label>
+    <textarea id="comments">This private comment should not be captured</textarea>
+    
+    <label for="country">Country:</label>
+    <select id="country">
+      <option value="us" selected>United States</option>
+      <option value="ca">Canada</option>
+      <option value="uk">United Kingdom</option>
+    </select>
+    
+    <input type="checkbox" id="terms" checked>
+    <label for="terms">I agree to terms (checked state should be cleared)</label>
+  </form>
+  
+  <div class="media-section">
+    <h3>Media Elements</h3>
+    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iNTAiIGZpbGw9IiM0MjA2OTUiLz48dGV4dCB4PSI1MCIgeT0iMzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTJweCIgZHk9Ii4zZW0iPkRlbW88L3RleHQ+PC9zdmc+" alt="Demo Image">
+    
+    <iframe src="about:blank" style="display:none;">
+      This iframe should be removed by sanitization
+    </iframe>
+  </div>
+  
+  <noscript>
+    <p>This noscript content should be removed by sanitization</p>
+  </noscript>
+  
+  <link rel="preload" href="dangerous-script.js">
+  <link rel="prefetch" href="tracking-pixel.gif">
+  
+  <div class="instructions">
+    <h3>Testing Instructions</h3>
+    <ol>
+      <li>Load this page in a browser with the Creator OS extension installed</li>
+      <li>Ensure this page's URL matches a pattern in your whitelist</li>
+      <li>Open the extension popup and verify the hostname and toggle state</li>
+      <li>Check the browser console for capture logs (if DEBUG=true)</li>
+      <li>Use "Capture Now" to trigger a manual capture</li>
+      <li>Verify that the captured DOM excludes:
+        <ul>
+          <li>Script tags and their content</li>
+          <li>Style tags and their content</li>
+          <li>Event handler attributes (onclick, onmouseover, etc.)</li>
+          <li>Form input values</li>
+          <li>Selected option states</li>
+          <li>Iframe elements</li>
+          <li>Noscript elements</li>
+          <li>Preload/prefetch link elements</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+  
+  <footer>
+    <p><small>Creator OS Capture Extension Demo - Phase 0</small></p>
+  </footer>
+</body>
+</html>
