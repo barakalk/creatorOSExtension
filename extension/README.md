@@ -1,224 +1,229 @@
 # Creator OS Capture Extension - Phase 0
 
-A Chrome extension that automatically captures and sends sanitized DOM content from whitelisted websites to the Creator OS backend for analysis.
+A Chrome extension that captures and stores DOM content from AI services for analysis and processing.
 
 ## Features
 
-- **Whitelist-driven capture**: Only runs on domains/URL patterns from a remote whitelist
-- **DOM sanitization**: Removes scripts, styles, event handlers, and form values
-- **Size-capped capture**: Limits DOM size to ~1.5MB with truncation
-- **Per-site toggle**: Enable/disable capture for specific hostnames
-- **Manual capture**: Trigger captures on-demand via popup
-- **Background processing**: Posts to `/api/capture/dom` then `/api/parse/:captureId`
+### 🎯 **Smart Domain Capture**
+- **Whitelist-based**: Only captures from approved domains (currently Midjourney)
+- **Automatic detection**: Runs on document idle for seamless capture
+- **Manual trigger**: Click "Capture Now" for on-demand capture
+- **Per-site toggle**: Enable/disable capture for specific domains
 
-## Project Structure
+### 💾 **Hybrid Storage System**
+- **IndexedDB storage**: Saves DOM content locally for offline access
+- **Backup downloads**: Optional HTML file downloads to your Downloads folder
+- **Metadata tracking**: Stores URL, timestamp, file size, and page title
+- **Offline access**: View captured content without internet connection
 
-```
-src/
-├── manifest.json          # MV3 extension manifest
-├── config.ts             # API endpoints and settings
-├── types/global.d.ts     # TypeScript type definitions
-├── messages.ts           # Runtime message types and helpers
-├── utils/logger.ts       # Debug logging utilities
-├── sanitize.ts           # DOM sanitization logic
-├── whitelist.ts          # URL pattern matching and caching
-├── api.ts               # Backend API communication
-├── background.ts        # Service worker (message handler)
-├── content.ts           # Content script (DOM capture)
-├── popup/
-│   ├── popup.html       # Popup UI markup
-│   └── popup.ts         # Popup logic and event handling
-├── test/
-│   ├── sanitize.test.ts # DOM sanitization tests
-│   ├── whitelist.test.ts # Pattern matching tests
-│   └── api.test.ts      # API communication tests
-└── build/
-    └── zip.js           # Extension packaging script
-```
+### 🔧 **Management Interface**
+- **Popup UI**: Clean interface to manage captures and settings
+- **Capture list**: View all stored captures with metadata
+- **Quick actions**: Open captures in new tabs or delete them
+- **Real-time updates**: Refresh capture list on demand
 
-## Setup
+### ⚙️ **Developer Features**
+- **Demo mode**: Test capture flow without backend server
+- **Service worker logs**: Debug capture and storage operations
+- **TypeScript**: Full type safety and IntelliSense support
+- **Modular architecture**: Clean separation of concerns
 
-### Prerequisites
+## Installation
 
-- Node.js 18+ and npm
-- Chrome browser for testing
-
-### Installation
-
-1. **Clone and install dependencies:**
+### From Source
+1. **Clone and build**:
    ```bash
-   cd /path/to/creator-os/extension
+   cd extension
    npm install
-   ```
-
-2. **Configure API endpoint (optional):**
-   Edit `src/config.ts` to change the backend URL:
-   ```typescript
-   export const API_BASE = 'http://localhost:3000'; // Change as needed
-   ```
-
-3. **Build the extension:**
-   ```bash
    npm run build
    ```
 
-### Development
+2. **Load in Chrome**:
+   - Open `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select the `dist/` folder
+   - Grant site access permissions when prompted
 
-- **Development mode (watch):** `npm run dev`
-- **Type checking:** `npm run typecheck`  
-- **Linting:** `npm run lint`
-- **Testing:** `npm run test`
-- **Package for distribution:** `npm run zip`
+3. **Verify installation**:
+   - Extension icon should appear in Chrome toolbar
+   - No errors should show in the extension card
 
-## Loading the Extension
+## Usage
 
-### Load Unpacked Extension
+### Basic Capture Workflow
+1. **Visit supported site**: Navigate to `https://www.midjourney.com/imagine`
+2. **Check status**: Extension icon shows capture is enabled
+3. **Capture content**:
+   - **Automatic**: Content captures on page load (if enabled)
+   - **Manual**: Click extension icon → "Capture Now"
+4. **View results**: Open popup to see stored captures
 
-1. Build the extension: `npm run build`
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" (toggle in top right)
-4. Click "Load unpacked" and select the `dist/` folder
-5. The extension should appear in your extensions list
+### Managing Stored Captures
+1. **View captures**: Click extension icon to open popup
+2. **Browse list**: Scroll through "Saved Captures" section
+3. **Open capture**: Click "Open" to view DOM in new tab
+4. **Delete capture**: Click "Delete" to remove from storage
+5. **Refresh list**: Click "Refresh" to update the display
 
-### Test Installation
+### Configuration
+- **Toggle capture**: Use the switch in popup to enable/disable per site
+- **Demo mode**: Edit `src/config.ts` → set `DEMO_MODE = true/false`
+- **API endpoint**: Edit `src/config.ts` → set `API_BASE` for your server
+- **Whitelist domains**: Edit `src/whitelist.ts` → modify pattern array
 
-1. Visit a whitelisted site (e.g., if your backend has `https://www.runwayml.com/*`)
-2. Check the browser console for capture logs (if `DEBUG = true`)
-3. Click the extension icon to see the popup with hostname and toggle
-4. Use "Capture Now" button to trigger manual captures
+## Architecture
 
-## Configuration
-
-### API Base URL
-
-Change the backend URL in `src/config.ts`:
-```typescript
-export const API_BASE = 'https://your-api-server.com';
+### File Structure
+```
+src/
+├── background.ts          # Service worker (capture processing, storage)
+├── content.ts            # Content script (DOM extraction, sanitization)
+├── popup/
+│   ├── popup.html        # Extension popup UI
+│   └── popup.ts          # Popup logic and storage management
+├── utils/
+│   ├── storage.ts        # IndexedDB utilities
+│   └── logger.ts         # Debug logging
+├── types/
+│   └── global.d.ts       # TypeScript type definitions
+├── config.ts             # Configuration settings
+├── messages.ts           # Inter-script communication
+├── whitelist.ts          # Domain whitelist management
+└── manifest.json         # Extension manifest
 ```
 
-### Debug Logging
+### Data Flow
+1. **Content script** extracts and sanitizes DOM from whitelisted pages
+2. **Background worker** receives DOM data via messaging
+3. **Storage utility** saves to IndexedDB with metadata
+4. **Popup interface** lists and manages stored captures
+5. **Optional backend** processes captures for analysis (demo mode available)
 
-Toggle debug logging in `src/config.ts`:
+### Storage Schema
 ```typescript
-export const DEBUG = false; // Set to false to disable console logs
+// IndexedDB stores
+captures: {
+  id: string;           // cap_<timestamp>
+  domHtml: string;      // Full DOM content
+}
+
+metadata: {
+  id: string;           // cap_<timestamp>
+  url: string;          // Source page URL
+  timestamp: number;    // Capture time
+  sizeBytes: number;    // DOM size
+  title?: string;       // Page title
+}
 ```
 
-### DOM Size Limit
+## Development
 
-Adjust the DOM size cap in `src/config.ts`:
-```typescript
-export const MAX_DOM_BYTES = 2_000_000; // 2MB instead of 1.5MB
-```
-
-## Testing
-
-### Unit Tests
-
-Run the test suite:
+### Build Commands
 ```bash
-npm run test
+npm run build          # Full build (TypeScript + Vite + esbuild)
+npm run build:content  # Content script only (esbuild IIFE)
+npm run dev:content    # Watch content script changes
+npm run zip            # Create extension package
+npm run test           # Run test suite
+npm run lint           # Code linting
 ```
 
-Tests cover:
-- DOM sanitization (script removal, attribute stripping, form clearing)
-- URL pattern matching with wildcards
-- API request/response handling
-- Error conditions and edge cases
+### Key Technologies
+- **Manifest V3**: Modern Chrome extension architecture
+- **TypeScript**: Type-safe development
+- **Vite**: Fast build system for background/popup
+- **esbuild**: Single-file bundling for content script
+- **IndexedDB**: Client-side storage for large DOM content
 
-### Manual Testing
+### Testing Locally
+1. **Enable demo mode**: Set `DEMO_MODE = true` in `src/config.ts`
+2. **Build and reload**: `npm run build` → reload extension
+3. **Test capture**: Visit Midjourney → click "Capture Now"
+4. **Verify storage**: Check popup for saved captures
+5. **Debug logs**: Open service worker DevTools for detailed logs
 
-1. **Create a test page** (`test.html`):
-   ```html
-   <!DOCTYPE html>
-   <html>
-   <head>
-     <title>Test Page</title>
-     <script>console.log('This should be removed');</script>
-     <style>.test { color: red; }</style>
-   </head>
-   <body>
-     <h1>Test Content</h1>
-     <button onclick="alert('dangerous')">Click Me</button>
-     <form>
-       <input type="text" value="secret data">
-       <textarea>private info</textarea>
-     </form>
-   </body>
-   </html>
-   ```
+## Configuration Options
 
-2. **Set up local whitelist** that includes your test page URL
-3. **Load the extension** and visit your test page
-4. **Check console logs** for capture activity
-5. **Verify sanitization** by checking the captured DOM excludes:
-   - `<script>` tags and content
-   - `<style>` tags and content  
-   - `onclick` and other event attributes
-   - Input/textarea values
+### Environment Settings (`src/config.ts`)
+```typescript
+export const API_BASE = 'http://localhost:3000';  // Backend server
+export const DEMO_MODE = true;                    // Skip backend calls
+export const MAX_DOM_BYTES = 1_500_000;          // ~1.5MB limit
+export const DEBUG = true;                        // Enable logging
+```
 
-### Backend Integration Testing
-
-Ensure your backend has these endpoints:
-
-- `GET /api/whitelist` - Returns JSON array of pattern objects:
-  ```json
-  [
-    {"pattern": "https://www.runwayml.com/*"},
-    {"pattern": "https://www.midjourney.com/*"}
-  ]
-  ```
-
-- `POST /api/capture/dom` - Accepts capture payload:
-  ```json
-  {
-    "url": "https://example.com/page",
-    "domHtml": "<!doctype html>...",
-    "meta": {
-      "title": "Page Title",
-      "userAgent": "Chrome/...",
-      "viewport": {"width": 1920, "height": 1080},
-      "timestamp": 1234567890
-    }
-  }
-  ```
-  Returns: `{"id": "capture-123", "domHash": "abc..."}`
-
-- `POST /api/parse/:captureId` - Triggers parsing, returns success/error
+### Domain Whitelist (`src/whitelist.ts`)
+```typescript
+const patterns: WhitelistPattern[] = [
+  { pattern: 'https://www.midjourney.com/imagine*' },
+  { pattern: 'https://*.midjourney.com/*' },
+  // Add more patterns as needed
+];
+```
 
 ## Troubleshooting
 
-### Extension Not Loading
+### Common Issues
 
-- Check for TypeScript errors: `npm run typecheck`
-- Verify manifest.json is valid
-- Look for errors in Chrome's extension management page
+**Extension won't load**:
+- Check for TypeScript errors: `npm run build`
+- Verify all files exist in `dist/` folder
+- Ensure manifest.json is valid
 
-### Capture Not Working
+**Content script not running**:
+- Grant site access: Extension Details → "On all sites"
+- Hard refresh target page (Cmd+Shift+R)
+- Check console for "Content script initialized"
 
-- Check if the site is in the whitelist (console logs show this)
-- Verify the per-site toggle is enabled (check popup)
-- Ensure backend is running and accessible
-- Check network tab for API request failures
+**Storage not working**:
+- Check IndexedDB quota in DevTools → Application → Storage
+- Verify service worker logs for storage errors
+- Clear extension data if corrupted
 
-### Tests Failing
+**Capture failing**:
+- Enable demo mode to bypass backend issues
+- Check network requests in service worker DevTools
+- Verify domain is in whitelist patterns
 
-- Run `npm run typecheck` to check for type issues
-- Ensure all dependencies are installed: `npm install`
-- Check that jsdom is properly mocked for DOM tests
+### Debug Information
+- **Service worker logs**: Extension card → "service worker" link
+- **Content script logs**: Target page → DevTools → Console
+- **Storage inspection**: DevTools → Application → IndexedDB → creator_os_captures
+- **Extension errors**: Extension card → "Errors" button
 
-## Browser Compatibility
+## API Integration
 
-- **Chrome 88+** (Manifest V3 support)
-- **Edge 88+** (Chromium-based)
-- **Other Chromium browsers** with MV3 support
+### Backend Requirements
+When `DEMO_MODE = false`, the extension expects:
 
-## Security Notes
+```typescript
+POST /api/capture/dom
+Body: { url: string, domHtml: string, meta?: CaptureMetadata }
+Response: { id: string, domHash: string }
 
-- DOM sanitization removes all executable content
-- Form values are cleared before transmission
-- No authentication tokens are stored or transmitted
-- Debug logs can be disabled for production builds
+POST /api/parse/:captureId
+Response: 200 OK
+```
+
+### Custom Processing
+To add custom DOM processing:
+1. Modify `src/content.ts` → `serializeSanitizedDom()`
+2. Update `src/background.ts` → `handleCaptureDom()`
+3. Extend storage schema in `src/utils/storage.ts`
 
 ## License
 
-Private - Creator OS Project
+Private - Creator OS Phase 0
+
+## Changelog
+
+### v0.1.0 (Current)
+- ✅ Domain-based capture (Midjourney support)
+- ✅ IndexedDB storage with metadata
+- ✅ Popup management interface
+- ✅ Hybrid storage (IndexedDB + backup downloads)
+- ✅ Service worker architecture (Manifest V3)
+- ✅ TypeScript support with full type safety
+- ✅ Demo mode for testing without backend
+- ✅ Per-site capture toggles
+- ✅ Automatic and manual capture modes
